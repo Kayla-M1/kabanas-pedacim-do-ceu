@@ -1,0 +1,264 @@
+{
+  "name": "Kabanas – Pedidos de reserva com IA (v4)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kabanas-reserva",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "a1",
+      "name": "Formulário do site",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "kabanas-reserva"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Você é a assistente de reservas das Kabanas Pedacim do Céu. Use SOMENTE as informações oficiais abaixo. Se o hóspede perguntar algo que não está nelas (animais, decoração, café da manhã, endereço, descontos etc.), NÃO invente e NÃO diga sim nem não: diga que vai confirmar com a equipe. Nunca confirme disponibilidade de datas nem formas de pagamento.\n\nINFORMAÇÕES OFICIAIS\n- Kabana do Lago: diária R$ 900 (chegada de segunda a quinta, entrada 16h, saída 13h); 2 diárias R$ 1.500; fim de semana R$ 2.000 (sexta 16h a domingo 17h); upgrade de R$ 100 para sair segunda 12h. Capacidade: confirmar com a equipe.\n- Kabana dos Hibiscos: diária R$ 650 (chegada de terça a sexta, entrada 15h, saída 12h); fim de semana R$ 1.800 (sexta 15h a segunda 12h), R$ 1.600 (sexta 15h a domingo 16h) ou R$ 1.300 (sábado 15h a segunda 12h). Acomoda até 4 adultos e 2 crianças de até 12 anos.\n- As duas: hidromassagem externa, ar-condicionado e mezanino. Eco sauna opcional, valor a consultar.\n\nResponda SOMENTE em JSON com as chaves: resumo (1 frase; se houver algo a confirmar, termine com 'A confirmar: ...'), tipo (reserva | duvida | aniversario | grupo | outro), prioridade (alta | media | baixa; alta se a chegada for em até 7 dias ou for data especial), resposta_sugerida (mensagem curta, simpática, em português, para o WhatsApp, sem prometer nada fora das informações oficiais).\n\nIMPORTANTE: responda DIRETO tudo o que está nas informações oficiais (preços, horários, capacidade, comodidades). Só diga que vai confirmar o que NÃO estiver nelas.\n\nEXEMPLO DE RESPOSTA CERTA\nPergunta: \"Quanto custa o fim de semana na Kabana do Lago? Posso levar cachorro?\"\nresposta_sugerida: \"Oi! O fim de semana na Kabana do Lago custa R$ 2.000, de sexta às 16h até domingo às 17h. Sobre levar cachorro, vou confirmar com a equipe e já te aviso!\"\n\nEXEMPLO DE RESPOSTA ERRADA (nunca faça)\n\"Sim, aceitamos cachorros!\" (inventado) ou \"Vou confirmar o valor\" (o valor está nas informações oficiais).\n\nCAPACIDADE: quando o hóspede disser quantas pessoas vêm, compare com a capacidade oficial antes de responder. Se o número de adultos E o de crianças estiverem dentro do limite, diga que cabe (ex.: 3 adultos e 2 crianças cabem na Kabana dos Hibiscos, que aceita até 4 adultos e 2 crianças). Se passar do limite, diga que o grupo é maior que a capacidade e ofereça conversar com a equipe. Só diga que vai confirmar a capacidade quando ela não estiver nas informações oficiais (Kabana do Lago)."
+            },
+            {
+              "content": "=Nome: {{ $json.body.nome }}\nTelefone: {{ $json.body.telefone }}\nInteresse: {{ $json.body.kabana }}\nChegada: {{ $json.body.chegada || 'não informada' }}\nHoje: {{ $now.toFormat('yyyy-MM-dd') }}\nMensagem: {{ $json.body.mensagem || '(sem mensagem)' }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "a2",
+      "name": "IA analisa o pedido",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "Data do pedido",
+              "value": "={{ $now.toFormat('dd/MM/yyyy HH:mm') }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "Nome",
+              "value": "={{ $('Formulário do site').item.json.body.nome }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "Telefone",
+              "value": "={{ $('Formulário do site').item.json.body.telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "Kabana",
+              "value": "={{ $('Formulário do site').item.json.body.kabana }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "Chegada",
+              "value": "={{ $('Formulário do site').item.json.body.chegada }}",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "Mensagem",
+              "value": "={{ $('Formulário do site').item.json.body.mensagem }}",
+              "type": "string"
+            },
+            {
+              "id": "f7",
+              "name": "Tipo",
+              "value": "={{ $json.message.content.tipo }}",
+              "type": "string"
+            },
+            {
+              "id": "f8",
+              "name": "Prioridade",
+              "value": "={{ $json.message.content.prioridade }}",
+              "type": "string"
+            },
+            {
+              "id": "f9",
+              "name": "Resumo",
+              "value": "={{ $json.message.content.resumo }}",
+              "type": "string"
+            },
+            {
+              "id": "f10",
+              "name": "Resposta sugerida",
+              "value": "={{ $json.message.content.resposta_sugerida }}",
+              "type": "string"
+            },
+            {
+              "id": "f11",
+              "name": "Status",
+              "value": "Novo",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a3",
+      "name": "Organiza os dados",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "a4",
+      "name": "Salva na planilha",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "SEU_EMAIL@exemplo.com",
+        "subject": "={{ $('Organiza os dados').item.json['Prioridade'] === 'alta' ? '🔴 ' : '' }}Novo pedido – {{ $('Organiza os dados').item.json['Kabana'] }} – {{ $('Organiza os dados').item.json['Nome'] }}",
+        "emailType": "text",
+        "message": "=Novo pedido pelo site das Kabanas\n\nNome: {{ $('Organiza os dados').item.json['Nome'] }}\nTelefone: {{ $('Organiza os dados').item.json['Telefone'] }}\nKabana: {{ $('Organiza os dados').item.json['Kabana'] }}\nChegada: {{ $('Organiza os dados').item.json['Chegada'] }}\nTipo: {{ $('Organiza os dados').item.json['Tipo'] }} | Prioridade: {{ $('Organiza os dados').item.json['Prioridade'] }}\n\nResumo da IA: {{ $('Organiza os dados').item.json['Resumo'] }}\n\nResposta sugerida para o WhatsApp:\n{{ $('Organiza os dados').item.json['Resposta sugerida'] }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a5",
+      "name": "Avisa por e-mail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        0
+      ],
+      "webhookId": "kabanas-gmail"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"resposta\": {{ JSON.stringify($('Organiza os dados').item.json['Resposta sugerida']) }} }",
+        "options": {}
+      },
+      "id": "a6",
+      "name": "Responde ao site",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Formulário do site": {
+      "main": [
+        [
+          {
+            "node": "IA analisa o pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA analisa o pedido": {
+      "main": [
+        [
+          {
+            "node": "Organiza os dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Organiza os dados": {
+      "main": [
+        [
+          {
+            "node": "Salva na planilha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salva na planilha": {
+      "main": [
+        [
+          {
+            "node": "Avisa por e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisa por e-mail": {
+      "main": [
+        [
+          {
+            "node": "Responde ao site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
