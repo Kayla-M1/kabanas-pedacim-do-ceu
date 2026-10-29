@@ -230,6 +230,7 @@ section{scroll-margin-top:80px}
 .cform-foot p{font-size:.82rem;color:var(--palha);max-width:24rem}
 .cform-ok{grid-column:1/-1;padding:22px 18px;background:var(--mata);display:grid;gap:12px;justify-items:start}
 .cform-ok b{font-family:var(--display);font-weight:400;font-size:1.5rem}
+.ai-reply{border-left:2px solid var(--lume);padding-left:12px;color:var(--linho);font-size:.95rem}
 @media (max-width:900px){.contact-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:520px){.cform{grid-template-columns:minmax(0,1fr)}.cform .field{border-right:0}}
 
@@ -411,7 +412,7 @@ dialog::backdrop{background:rgba(8,7,5,.94)}
         </a>
       </div>
 
-      <!-- Sem backend: o formulário valida os campos e monta a mensagem para o WhatsApp. Nada é enviado nem guardado pela página. -->
+      <!-- O formulário valida os campos, envia o pedido para uma automação no n8n (IA analisa, salva na planilha e avisa por e-mail) e monta a mensagem para o WhatsApp. -->
       <form class="cform rv" id="cform" novalidate>
         <div class="field"><label for="fName">Nome</label><input id="fName" autocomplete="name" required><span class="err" id="eName"></span></div>
         <div class="field"><label for="fPhone">Telefone</label><input id="fPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(DDD) 9...." required><span class="err" id="ePhone"></span></div>
@@ -420,11 +421,12 @@ dialog::backdrop{background:rgba(8,7,5,.94)}
         <div class="field"><label for="fDate">Chegada (opcional)</label><input id="fDate" type="date"><span class="err"></span></div>
         <div class="field full"><label for="fMsg">Mensagem</label><textarea id="fMsg" rows="3" placeholder="Quantas pessoas vêm, se é aniversário, alguma dúvida..."></textarea><span class="err"></span></div>
         <div class="cform-foot" id="cfoot">
-          <p>Ao enviar, abrimos o WhatsApp com sua mensagem pronta. Seus dados não ficam guardados neste site.</p>
+          <p>Ao enviar, seu pedido é registrado para a nossa equipe e abrimos o WhatsApp com sua mensagem pronta.</p>
           <button class="btn btn-solid" type="submit">Preparar mensagem</button>
         </div>
         <div class="cform-ok" id="cok" hidden>
           <b>Mensagem pronta.</b>
+          <p class="ai-reply" id="cokAi" hidden></p>
           <p class="muted">Toque no botão para abrir o WhatsApp e enviar. Se não abrir, chame no (92) 98598-5093.</p>
           <a class="btn btn-solid" id="cokLink" href="#contato" target="_blank" rel="noopener">Abrir WhatsApp e enviar</a>
         </div>
@@ -460,13 +462,14 @@ dialog::backdrop{background:rgba(8,7,5,.94)}
 <dialog class="priv" id="priv" aria-labelledby="privTitle">
   <button class="x" id="privClose" aria-label="Fechar">×</button>
   <h3 id="privTitle">Privacidade</h3>
-  <p>Este site não tem cadastro, não usa cookies de rastreamento e não guarda os dados digitados no formulário. Ao tocar em enviar, a mensagem é aberta no seu WhatsApp e só chega até nós se você mesmo enviar.</p>
+  <p>Este site não tem cadastro e não usa cookies de rastreamento. Quando você envia o formulário de contato, o nome, o telefone, o interesse, a data e a mensagem são registrados numa planilha interna para organizarmos o atendimento, e uma ferramenta de IA resume o pedido. Em seguida, a mensagem também é aberta no seu WhatsApp.</p>
   <p>As informações que você mandar pelo WhatsApp são usadas apenas para responder e organizar sua reserva. Para pedir a exclusão das suas mensagens, fale com a gente pelo mesmo número.</p>
 </dialog>
 
 <script>
 /* ===== Configuração fácil de editar ===== */
-const WHATS = '5592985985093'; // número com DDI e DDD, só dígitos
+const WHATS = '5592985985093';
+const PEDIDOS_URL = 'https://kaylam1.app.n8n.cloud/webhook/kabanas-reserva'; // automação n8n // número com DDI e DDD, só dígitos
 
 // Dias da semana: 0 dom, 1 seg, 2 ter, 3 qua, 4 qui, 5 sex, 6 sáb.
 // saida = quantos dias depois da chegada é a saída.
@@ -707,6 +710,13 @@ cform.addEventListener('submit', e => {
   if ($('#fMsg').value.trim()) msg += ` ${$('#fMsg').value.trim()}`;
   $('#cokLink').href = wa(msg);
   $('#cfoot').hidden = true; $('#cok').hidden = false; $('#cokLink').focus();
+  // Automação n8n: registra o pedido e recebe uma resposta escrita pela IA
+  fetch(PEDIDOS_URL, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+    nome: name, telefone: $('#fPhone').value.trim(), kabana: $('#fKab').value,
+    chegada: $('#fDate').value || '', mensagem: $('#fMsg').value.trim()
+  })}).then(r => r.ok ? r.json() : null).then(d => {
+    if (d && d.resposta){ const el = $('#cokAi'); el.textContent = d.resposta; el.hidden = false; }
+  }).catch(() => {});
 });
 ['#fName','#fPhone'].forEach(s => $(s).addEventListener('input', () => { $(s).closest('.field').classList.remove('bad'); $(s).closest('.field').querySelector('.err').textContent = ''; }));
 
