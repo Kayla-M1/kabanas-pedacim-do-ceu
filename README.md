@@ -12,9 +12,15 @@ O estabelecimento recebia reservas só pelo Instagram e pelo WhatsApp, e os pre�
 
 - **Planejador de estadia.** O hóspede escolhe a data de chegada, quantos adultos e crianças vêm e qual cabana quer. A página mostra só os pacotes válidos para aquele dia da semana, com as datas de entrada e saída já calculadas, e respeita a capacidade de cada cabana. Quando não há opção para a data, sugere a próxima data com vaga.
 - **Reserva com mensagem pronta no WhatsApp.** A mensagem já sai com a cabana, o pacote, o valor, as datas e o número de pessoas, sem backend e sem plataforma paga.
-- **Formulário de contato** que confere os campos e monta a mensagem para o WhatsApp, sem guardar nenhum dado.
+- **Formulário de contato** que confere os campos, envia o pedido para a automação com IA e mostra na hora a resposta sugerida, além de montar a mensagem para o WhatsApp.
 - **Galeria em tela cheia** com teclado e gesto de deslizar no celular.
 - Layout responsivo, acessibilidade (rótulos, foco visível, `prefers-reduced-motion`) e animações leves.
+
+## 🤖 Automação com IA (n8n)
+
+O formulário de contato está ligado a uma **automação no n8n**. A IA classifica cada pedido, define a prioridade, escreve uma resposta e registra tudo no Google Sheets, além de avisar a equipe por e-mail. A automação passou por quatro versões de engenharia de prompt para eliminar respostas inventadas pela IA.
+
+👉 **[Veja o fluxo, os testes e a evolução v1 → v4](automacao-n8n/README.md)**
 
 ## Como a IA entrou no processo
 
@@ -26,7 +32,7 @@ Usei IA generativa (Claude, ChatGPT e Gemini) como parceira em todas as etapas:
 
 ## Tecnologias
 
-HTML, CSS e JavaScript puro, sem frameworks e sem backend. A configuração fica no topo do `<script>`: o número do WhatsApp e a lista de cabanas, com fotos, pacotes, preços e regras.
+HTML, CSS e JavaScript puro, sem frameworks. O backend é a automação no n8n. A configuração fica no topo do `<script>`: o número do WhatsApp e a lista de cabanas, com fotos, pacotes, preços e regras.
 
 ## Estrutura
 
